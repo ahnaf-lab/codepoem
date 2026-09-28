@@ -8,6 +8,7 @@ from .poemgen import (
     Poem,
     generate_poem,
 )
+from .reveal import RevealFrame, TypewriterReveal
 
 __all__ = [
     "DiffStats",
@@ -18,4 +19,6 @@ __all__ = [
     "FORM_HAIKU",
     "FORM_LIMERICK",
     "FORM_FREE_VERSE",
+    "RevealFrame",
+    "TypewriterReveal",
 ]

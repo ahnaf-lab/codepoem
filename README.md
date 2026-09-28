@@ -16,6 +16,17 @@ from hand-written, syllable- and rhyme-checked line pools filtered by which
 change, ...); free verse has no meter to protect, so it interpolates live
 feature values (file names, keyword, counts) directly.
 
+This milestone also adds the TUI renderer: a typewriter effect that reveals
+a generated poem in the terminal one character at a time. It is split into
+two pieces on purpose. `codepoem.reveal.TypewriterReveal` is a pure state
+machine — no terminal, no `curses`, no wall-clock sleep — that tracks how
+many characters have been revealed and produces a `RevealFrame` (the
+partially revealed lines, the cursor position, whether the reveal is done)
+for any given number of ticks; it is what the test suite exercises frame by
+frame. `codepoem.tui` is a thin `curses` adapter that owns the actual window
+and timing loop, drives that state machine one tick per frame, and lets any
+keypress skip straight to the finished poem.
+
 ## Install
 
 Requires Python 3.10+. No third-party dependencies — everything used
@@ -69,6 +80,27 @@ print(poem)                               # the poem, one line per row
 Calling `generate_poem` again on the same `diff_text` always returns the
 same poem — there is no model and no network call involved, just a hash of
 the diff's own features used as a random seed.
+
+Play the poem back in the terminal with a typewriter reveal:
+
+```python
+from codepoem.tui import render_poem
+
+render_poem(poem)  # opens a curses screen; press any key to skip or exit
+```
+
+The reveal itself is driven by a small, terminal-independent state machine
+that you can also use directly (for example to drive a different renderer,
+or just to inspect what a given tick reveals):
+
+```python
+from codepoem.reveal import TypewriterReveal
+
+reveal = TypewriterReveal(poem.lines)
+frame = reveal.advance()   # reveals one more character
+print(frame.lines)         # each line, revealed up to this tick
+print(frame.done)          # True once every line is fully shown
+```
 
 Run the test suite with:
 
