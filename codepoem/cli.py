@@ -16,7 +16,7 @@ import sys
 from typing import Sequence
 
 from .diffparser import parse_diff
-from .poemgen import FORMS, Poem, generate_poem
+from .poemgen import FORMS, STYLES, Poem, generate_poem
 from .tui import render_poem
 
 # Generous but finite: a hung `git` (e.g. waiting on a credential prompt for
@@ -104,6 +104,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="force a poem form instead of picking one from the diff",
     )
     parser.add_argument(
+        "--style",
+        choices=STYLES,
+        default=None,
+        help="select a style pack for the poem's vocabulary (default: classic)",
+    )
+    parser.add_argument(
         "--no-anim",
         action="store_true",
         help="print the finished poem as plain text instead of animating it",
@@ -122,7 +128,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
 
     stats = parse_diff(diff_text)
-    poem = generate_poem(stats, form=args.form)
+    poem = generate_poem(stats, form=args.form, style=args.style)
 
     # A real animation needs a real terminal to draw into; fall back to
     # plain text whenever stdout is redirected (a pipe, a file, CI logs)

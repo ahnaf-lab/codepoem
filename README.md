@@ -2,8 +2,9 @@
 
 A terminal TUI that reads a git diff, extracts deterministic features from
 it, and turns your commit into a short typewritten poem — haiku, limerick or
-free verse — using a seeded template engine. No LLM involved: the same diff
-always produces the same poem.
+free verse, in one of several selectable style packs — using a seeded
+template engine. No LLM involved: the same diff, form and style always
+produce the same poem.
 
 This milestone adds the poem generator: a seeded template engine that turns
 the diff parser's extracted features (lines added/removed, files touched,
@@ -37,6 +38,17 @@ poem plays through the typewriter animation; `--no-anim` prints the
 finished poem as plain text instead, which is also what happens
 automatically whenever stdout is not a real terminal (for example
 `codepoem | cat` or output captured in a script).
+
+This milestone adds style packs: a second, independent axis alongside form.
+A style is a complete vocabulary bank of its own — haiku line pools,
+limerick rhyme groups, free-verse phrasing — so the same diff, in the same
+form, reads differently depending on which style is selected, while the
+meter and rhyme rules that make a haiku a haiku or a limerick a limerick
+stay exactly the same regardless of style. Three styles ship: `classic`
+(the default), `noir` (a detective-story vocabulary), and `cosmic` (a
+space-flight vocabulary). Style is selected explicitly with `--style`; it
+is never auto-picked from the diff the way form is, but once chosen the
+poem's content is still a pure, deterministic function of the diff.
 
 ## Install
 
@@ -89,6 +101,14 @@ codepoem --no-anim --form limerick
 codepoem --no-anim --form free_verse
 ```
 
+Select a style pack to change the poem's vocabulary (default: `classic`):
+
+```
+codepoem --no-anim --style noir
+codepoem --no-anim --style cosmic
+codepoem --no-anim --form limerick --style noir
+```
+
 Or use the library directly from Python:
 
 ```python
@@ -115,17 +135,19 @@ print(stats.keywords)        # e.g. ["hello", "world"]
 Turn those features into a poem with `generate_poem`:
 
 ```python
-from codepoem.poemgen import generate_poem, FORM_HAIKU
+from codepoem.poemgen import generate_poem, FORM_HAIKU, STYLE_NOIR
 
-poem = generate_poem(stats)               # form picked deterministically
-poem = generate_poem(stats, form=FORM_HAIKU)  # or request one explicitly
+poem = generate_poem(stats)               # form picked deterministically, classic style
+poem = generate_poem(stats, form=FORM_HAIKU)  # or request a form explicitly
+poem = generate_poem(stats, form=FORM_HAIKU, style=STYLE_NOIR)  # and a style
 print(poem.form)                          # "haiku", "limerick" or "free_verse"
+print(poem.style)                         # "classic", "noir" or "cosmic"
 print(poem)                               # the poem, one line per row
 ```
 
-Calling `generate_poem` again on the same `diff_text` always returns the
-same poem — there is no model and no network call involved, just a hash of
-the diff's own features used as a random seed.
+Calling `generate_poem` again on the same `diff_text`, `form` and `style`
+always returns the same poem — there is no model and no network call
+involved, just a hash of the diff's own features used as a random seed.
 
 Play the poem back in the terminal with a typewriter reveal:
 

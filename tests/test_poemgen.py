@@ -17,10 +17,23 @@ from codepoem.poemgen import (
     FORM_HAIKU,
     FORM_LIMERICK,
     FORMS,
+    STYLE_CLASSIC,
+    STYLE_COSMIC,
+    STYLE_NOIR,
+    STYLES,
+    _COSMIC_HAIKU_5,
+    _COSMIC_HAIKU_7,
+    _COSMIC_LIMERICK_A_GROUPS,
+    _COSMIC_LIMERICK_B_GROUPS,
     _HAIKU_5,
     _HAIKU_7,
     _LIMERICK_A_GROUPS,
     _LIMERICK_B_GROUPS,
+    _NOIR_HAIKU_5,
+    _NOIR_HAIKU_7,
+    _NOIR_LIMERICK_A_GROUPS,
+    _NOIR_LIMERICK_B_GROUPS,
+    _STYLES,
     Poem,
     choose_form,
     count_syllables,
@@ -116,51 +129,67 @@ class SyllableCounterTests(unittest.TestCase):
         self.assertEqual(count_syllables("123 !!!"), 0)
 
 
+_HAIKU_POOLS_BY_STYLE = {
+    STYLE_CLASSIC: (_HAIKU_5, _HAIKU_7),
+    STYLE_NOIR: (_NOIR_HAIKU_5, _NOIR_HAIKU_7),
+    STYLE_COSMIC: (_COSMIC_HAIKU_5, _COSMIC_HAIKU_7),
+}
+
+_LIMERICK_GROUPS_BY_STYLE = {
+    STYLE_CLASSIC: (_LIMERICK_A_GROUPS, _LIMERICK_B_GROUPS),
+    STYLE_NOIR: (_NOIR_LIMERICK_A_GROUPS, _NOIR_LIMERICK_B_GROUPS),
+    STYLE_COSMIC: (_COSMIC_LIMERICK_A_GROUPS, _COSMIC_LIMERICK_B_GROUPS),
+}
+
+
 class HaikuPoolMeterTests(unittest.TestCase):
-    """Every line in the haiku pools must scan as its declared syllable
-    count, under this module's own counter — otherwise line selection
-    could silently break the 5-7-5 form."""
+    """Every line in every style's haiku pools must scan as its declared
+    syllable count, under this module's own counter — otherwise line
+    selection could silently break the 5-7-5 form, for any style."""
 
-    def test_five_syllable_pool_is_five(self) -> None:
-        for text, _themes in _HAIKU_5:
-            self.assertEqual(
-                count_syllables(text), 5, f"{text!r} is not 5 syllables"
-            )
+    def test_five_syllable_pools_are_five(self) -> None:
+        for style, (five, _seven) in _HAIKU_POOLS_BY_STYLE.items():
+            for text, _themes in five:
+                self.assertEqual(
+                    count_syllables(text), 5, f"[{style}] {text!r} is not 5 syllables"
+                )
 
-    def test_seven_syllable_pool_is_seven(self) -> None:
-        for text, _themes in _HAIKU_7:
-            self.assertEqual(
-                count_syllables(text), 7, f"{text!r} is not 7 syllables"
-            )
+    def test_seven_syllable_pools_are_seven(self) -> None:
+        for style, (_five, seven) in _HAIKU_POOLS_BY_STYLE.items():
+            for text, _themes in seven:
+                self.assertEqual(
+                    count_syllables(text), 7, f"[{style}] {text!r} is not 7 syllables"
+                )
 
     def test_pools_have_no_duplicate_lines(self) -> None:
-        five_texts = [text for text, _themes in _HAIKU_5]
-        seven_texts = [text for text, _themes in _HAIKU_7]
-        self.assertEqual(len(five_texts), len(set(five_texts)))
-        self.assertEqual(len(seven_texts), len(set(seven_texts)))
+        for style, (five, seven) in _HAIKU_POOLS_BY_STYLE.items():
+            five_texts = [text for text, _themes in five]
+            seven_texts = [text for text, _themes in seven]
+            self.assertEqual(len(five_texts), len(set(five_texts)), style)
+            self.assertEqual(len(seven_texts), len(set(seven_texts)), style)
 
 
 class LimerickRhymeTests(unittest.TestCase):
     def test_every_group_has_at_least_two_lines(self) -> None:
-        for groups in (_LIMERICK_A_GROUPS, _LIMERICK_B_GROUPS):
-            for key, pool in groups.items():
-                self.assertGreaterEqual(
-                    len(pool), 2, f"rhyme group {key!r} is too small to pick from"
-                )
+        for style, (a_groups, b_groups) in _LIMERICK_GROUPS_BY_STYLE.items():
+            for groups in (a_groups, b_groups):
+                for key, pool in groups.items():
+                    self.assertGreaterEqual(
+                        len(pool),
+                        2,
+                        f"[{style}] rhyme group {key!r} is too small to pick from",
+                    )
 
     def test_every_line_in_a_group_ends_with_its_rhyme(self) -> None:
-        for key, pool in _LIMERICK_A_GROUPS.items():
-            for text, _themes in pool:
-                last_word = text.rstrip(".!?").split()[-1]
-                self.assertTrue(
-                    last_word.endswith(key), f"{text!r} does not rhyme with {key!r}"
-                )
-        for key, pool in _LIMERICK_B_GROUPS.items():
-            for text, _themes in pool:
-                last_word = text.rstrip(".!?").split()[-1]
-                self.assertTrue(
-                    last_word.endswith(key), f"{text!r} does not rhyme with {key!r}"
-                )
+        for style, (a_groups, b_groups) in _LIMERICK_GROUPS_BY_STYLE.items():
+            for groups in (a_groups, b_groups):
+                for key, pool in groups.items():
+                    for text, _themes in pool:
+                        last_word = text.rstrip(".!?").split()[-1]
+                        self.assertTrue(
+                            last_word.endswith(key),
+                            f"[{style}] {text!r} does not rhyme with {key!r}",
+                        )
 
 
 class GeneratePoemTests(unittest.TestCase):
@@ -217,6 +246,77 @@ class GeneratePoemTests(unittest.TestCase):
         second = generate_poem(stats)
         self.assertEqual(first.form, second.form)
         self.assertEqual(first.lines, second.lines)
+
+
+class StylePackTests(unittest.TestCase):
+    """Style packs swap vocabulary only; meter, rhyme and determinism are
+    guaranteed by the form regardless of which style supplies the words."""
+
+    def test_default_style_is_classic(self) -> None:
+        stats = parse_diff(SIMPLE_DIFF)
+        poem = generate_poem(stats, form=FORM_HAIKU)
+        self.assertEqual(poem.style, STYLE_CLASSIC)
+
+    def test_every_style_is_selectable_and_recorded_on_the_poem(self) -> None:
+        stats = parse_diff(SIMPLE_DIFF)
+        for style in STYLES:
+            for form in FORMS:
+                poem = generate_poem(stats, form=form, style=style)
+                self.assertEqual(poem.style, style)
+                self.assertEqual(poem.form, form)
+
+    def test_haiku_meter_holds_for_every_style(self) -> None:
+        stats = parse_diff(SIMPLE_DIFF)
+        for style in STYLES:
+            poem = generate_poem(stats, form=FORM_HAIKU, style=style)
+            self.assertEqual(len(poem.lines), 3)
+            self.assertEqual(count_syllables(poem.lines[0]), 5, style)
+            self.assertEqual(count_syllables(poem.lines[1]), 7, style)
+            self.assertEqual(count_syllables(poem.lines[2]), 5, style)
+
+    def test_limerick_rhyme_holds_for_every_style(self) -> None:
+        stats = parse_diff(SIMPLE_DIFF)
+        for style in STYLES:
+            poem = generate_poem(stats, form=FORM_LIMERICK, style=style)
+            a_groups, b_groups = _LIMERICK_GROUPS_BY_STYLE[style]
+            last_words = [line.rstrip(".!?").split()[-1] for line in poem.lines]
+            a1, a2, b1, b2, a3 = last_words
+
+            def rhyme_key(word: str) -> str:
+                for key in list(a_groups) + list(b_groups):
+                    if word.endswith(key):
+                        return key
+                return word
+
+            self.assertEqual(rhyme_key(a1), rhyme_key(a2), style)
+            self.assertEqual(rhyme_key(a2), rhyme_key(a3), style)
+            self.assertEqual(rhyme_key(b1), rhyme_key(b2), style)
+            self.assertNotEqual(rhyme_key(a1), rhyme_key(b1), style)
+
+    def test_different_styles_produce_different_wording(self) -> None:
+        stats = parse_diff(SIMPLE_DIFF)
+        by_style = {
+            style: generate_poem(stats, form=FORM_FREE_VERSE, style=style).lines
+            for style in STYLES
+        }
+        self.assertEqual(len({tuple(lines) for lines in by_style.values()}), len(STYLES))
+
+    def test_same_diff_and_style_is_deterministic_across_runs(self) -> None:
+        stats = parse_diff(MULTI_FILE_DIFF)
+        for style in STYLES:
+            poems = [
+                generate_poem(stats, form=FORM_LIMERICK, style=style) for _ in range(5)
+            ]
+            self.assertTrue(all(p.lines == poems[0].lines for p in poems))
+
+    def test_unknown_style_is_rejected(self) -> None:
+        stats = parse_diff(SIMPLE_DIFF)
+        with self.assertRaises(ValueError):
+            generate_poem(stats, style="sonnet-wave")
+
+    def test_styles_registry_matches_style_pack_data(self) -> None:
+        self.assertEqual(set(STYLES), set(_STYLES))
+        self.assertEqual(len(STYLES), 3)
 
 
 class DeterminismTests(unittest.TestCase):
@@ -298,6 +398,16 @@ class GoldenFileTests(unittest.TestCase):
         stats = parse_diff(MULTI_FILE_DIFF)
         poem = generate_poem(stats, form=FORM_FREE_VERSE)
         self.assertEqual(str(poem), _read_golden("multi_file_diff_free_verse"))
+
+    def test_simple_diff_haiku_noir_style(self) -> None:
+        stats = parse_diff(SIMPLE_DIFF)
+        poem = generate_poem(stats, form=FORM_HAIKU, style=STYLE_NOIR)
+        self.assertEqual(str(poem), _read_golden("simple_diff_haiku_noir"))
+
+    def test_simple_diff_limerick_cosmic_style(self) -> None:
+        stats = parse_diff(SIMPLE_DIFF)
+        poem = generate_poem(stats, form=FORM_LIMERICK, style=STYLE_COSMIC)
+        self.assertEqual(str(poem), _read_golden("simple_diff_limerick_cosmic"))
 
 
 if __name__ == "__main__":

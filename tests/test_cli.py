@@ -77,18 +77,27 @@ class BuildParserTests(unittest.TestCase):
         args = build_parser().parse_args([])
         self.assertIsNone(args.ref)
         self.assertIsNone(args.form)
+        self.assertIsNone(args.style)
         self.assertFalse(args.no_anim)
 
     def test_ref_and_flags_parsed(self):
-        args = build_parser().parse_args(["HEAD", "--form", "haiku", "--no-anim"])
+        args = build_parser().parse_args(
+            ["HEAD", "--form", "haiku", "--style", "noir", "--no-anim"]
+        )
         self.assertEqual(args.ref, "HEAD")
         self.assertEqual(args.form, "haiku")
+        self.assertEqual(args.style, "noir")
         self.assertTrue(args.no_anim)
 
     def test_unknown_form_is_rejected(self):
         with self.assertRaises(SystemExit):
             with redirect_stderr(io.StringIO()):
                 build_parser().parse_args(["--form", "sonnet"])
+
+    def test_unknown_style_is_rejected(self):
+        with self.assertRaises(SystemExit):
+            with redirect_stderr(io.StringIO()):
+                build_parser().parse_args(["--style", "sonnet-wave"])
 
 
 class MainTests(unittest.TestCase):
@@ -124,6 +133,17 @@ class MainTests(unittest.TestCase):
         # A limerick is always 5 lines.
         lines = [line for line in out.getvalue().splitlines() if line]
         self.assertEqual(len(lines), 5)
+
+    def test_explicit_style_changes_output_wording(self):
+        with patch("codepoem.cli.get_diff_text", return_value=_SIMPLE_DIFF):
+            classic_out = io.StringIO()
+            with redirect_stdout(classic_out):
+                main(["--no-anim", "--form", "haiku"])
+            noir_out = io.StringIO()
+            with redirect_stdout(noir_out):
+                main(["--no-anim", "--form", "haiku", "--style", "noir"])
+
+        self.assertNotEqual(classic_out.getvalue(), noir_out.getvalue())
 
     def test_non_tty_stdout_falls_back_to_plain_text_without_no_anim(self):
         # redirect_stdout swaps in a StringIO, which is never a tty, so this
