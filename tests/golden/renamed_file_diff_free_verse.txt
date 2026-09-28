@@ -1,0 +1,4 @@
+src/new_name.py changed, alone
+not a single line was disturbed
+src/old_name.py became src/new_name.py
+the codebase, unmistakably different

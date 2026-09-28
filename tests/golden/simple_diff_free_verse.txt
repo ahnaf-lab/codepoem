@@ -1,0 +1,4 @@
+foo.py changed, alone
+2 lines arrived, 1 lines left
+and through it all: hello, goodbye, world
+the codebase, a little larger now

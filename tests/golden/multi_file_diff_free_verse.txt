@@ -1,0 +1,4 @@
+2 files moved together
+1 lines arrived, 1 lines left
+and through it all: widget, widget_factory
+the codebase, unmistakably different
