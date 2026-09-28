@@ -27,6 +27,17 @@ frame. `codepoem.tui` is a thin `curses` adapter that owns the actual window
 and timing loop, drives that state machine one tick per frame, and lets any
 keypress skip straight to the finished poem.
 
+This milestone adds the `codepoem` command itself. With no arguments it
+reads `git diff` (your unstaged working-tree changes); given a ref, it reads
+`git show <ref>` instead — both by calling `git` as a fixed, non-shell
+subprocess argument list, so nothing in the diff text or a maliciously
+crafted ref can inject an extra command or flag. A ref that looks like an
+option (starts with `-`) is rejected before `git` ever runs. By default the
+poem plays through the typewriter animation; `--no-anim` prints the
+finished poem as plain text instead, which is also what happens
+automatically whenever stdout is not a real terminal (for example
+`codepoem | cat` or output captured in a script).
+
 ## Install
 
 Requires Python 3.10+. No third-party dependencies — everything used
@@ -41,9 +52,44 @@ python3 -m pip install -e .
 ```
 
 (Editable install is optional; the package also works by running Python
-directly from the repository root.)
+directly from the repository root, e.g. `python3 -m codepoem.cli`.)
 
 ## Usage
+
+Run it inside a git repository, with no arguments, to turn your current
+unstaged changes into a poem with a typewriter reveal:
+
+```
+codepoem
+```
+
+Pass a ref to render the poem for a specific commit instead (equivalent to
+`git show <ref>`):
+
+```
+codepoem HEAD
+codepoem HEAD~3
+codepoem a1b2c3d
+```
+
+Add `--no-anim` to print the finished poem as plain text instead of
+animating it (this also happens automatically when stdout isn't a
+terminal, e.g. when piping to another command):
+
+```
+codepoem --no-anim
+codepoem --no-anim HEAD
+```
+
+Force a specific form instead of letting the diff pick one deterministically:
+
+```
+codepoem --no-anim --form haiku
+codepoem --no-anim --form limerick
+codepoem --no-anim --form free_verse
+```
+
+Or use the library directly from Python:
 
 ```python
 from codepoem.diffparser import parse_diff

@@ -8,5 +8,8 @@ version = "0.1.0"
 description = "Turn a git diff into a short, deterministic poem"
 requires-python = ">=3.10"
 
+[project.scripts]
+codepoem = "codepoem.cli:main"
+
 [tool.setuptools]
 packages = ["codepoem"]
